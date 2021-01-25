@@ -6,28 +6,151 @@
  */
 
 //请前往 https://console.dnspod.cn/account/token 创建获取
+define("API_ID", "");
 define("API_TOKEN", "");
 
 //根域名，比如你注册的是 iton.pw 那么 iton.pw 就是根域名
 //特殊根域名，比如 google.com.hk，你不应该填写 com.hk 应该填写 google.com.cn
-define("DOMAIN", "iton.pw");
+define("DOMAIN", "nowtime.cc");
 
 //子域名，假设你的根域名是 iton.pw
 //你想解析 chuwen.iton.pw 那么你就填写 chuwen
 //你想解析 666.chuwen.iton.pw 那么你就填写 666.chuwen
 //以此类推
-define("SUB_DOMAIN", "nas");
+define("SUB_DOMAIN", "www");
 
-//是否开启 IPv4 解析，默认是 false 即不解析。true：解析
-//请确认你已经拥有公网 IPv4 再开启！
-define("A", false);
+//解析类型，如果需要解析的是 IPv6 那么填写 AAAA  （4个A）
+//如果需要解析的是 IPv4 那么填写 A
+define("TYPE", "AAAA");
 
-//是否开启 IPv4 解析，默认是 true 即解析。false：不解析
-//请确认你已经拥有公网 IPv6 再开启！
-define("AAAA", true);
+//获取公网 IP 地址
+if (TYPE === 'AAAA') {
+    try {
+        $ip = get_public_ipv6('win', 'x64');
+    } catch (Exception $e) {
+        die($e->getMessage());
+    }
+} else {
+    $ip = get_public_ipv4();
+}
 
-var_dump(get_public_ipv4());
+try {
+    $record = get_record_id(DOMAIN, SUB_DOMAIN, TYPE);
+} catch (Exception $e) {
+    die($e->getMessage());
+}
 
+//如果不存在该记录值就添加
+if (!$record) {
+    add_record(DOMAIN, SUB_DOMAIN, TYPE, $ip);
+}
+
+//如果存在该记录值就去修改
+
+//如果当前的IP和记录值相同就终止程序运行
+if ($record['value'] === $ip) {
+    print_info_log("当前IP与解析的记录值({$ip})相同，不更新", SUB_DOMAIN, DOMAIN, TYPE, "");
+}
+
+//修改记录值，函数里会作出提示，故这里只调用即可
+modify_record($record['id'], DOMAIN, SUB_DOMAIN, TYPE, $ip);
+
+/**
+ * 修改域名记录值
+ * @param $record_id
+ * @param $domain
+ * @param $sub_domain
+ * @param $type
+ * @param $value
+ */
+function modify_record($record_id, $domain, $sub_domain, $type, $value)
+{
+    $res = curl('https://dnsapi.cn/Record.Modify', get_request_param([
+        'domain' => $domain,
+        'record_id' => $record_id,
+        'sub_domain' => $sub_domain,
+        'record_type' => strtoupper($type),//记录类型：A、AAAA
+        'value' => $value,//记录值
+        'record_line' => '默认',//记录线路
+    ]), 1);
+
+    $response = json_decode($res, true);
+    if ($response['status']['code'] === '1') {
+        print_info_log("记录值更新成功！", $sub_domain, $domain, $type, $value);
+    }
+
+    print_info_log("记录值修改失败，原因：{$response['status']['message']}", $sub_domain, $domain, $type, $value);
+}
+
+/**
+ * 添加域名记录
+ * @param string $domain
+ * @param string $sub_domain
+ * @param string $type
+ * @param $value
+ */
+function add_record($domain, $sub_domain, $type, $value)
+{
+    $res = curl('https://dnsapi.cn/Record.Create', get_request_param([
+        'domain' => $domain,
+        'sub_domain' => $sub_domain,
+        'record_type' => strtoupper($type),//记录类型：A、AAAA
+        'value' => $value,//记录值
+    ]), 1);
+
+    $response = json_decode($res, true);
+    if ($response['status']['code'] === '1') {
+        print_info_log("记录值添加成功！", $sub_domain, $domain, $type, $value);
+    }
+
+    print_info_log("记录值添加失败，原因：{$response['status']['message']}", $domain, $sub_domain, $type, $value);
+}
+
+/**
+ * 获取指定域名的子域名 记录列表
+ *
+ * @param string $domain
+ * @param string $sub_domain
+ * @param string $type all：表示只获取 A 和 AAAA 记录值
+ * @return false|array
+ * @throws Exception
+ */
+function get_record_id($domain, $sub_domain, $type)
+{
+    $res = curl('https://dnsapi.cn/Record.List', get_request_param([
+        'domain' => $domain,
+        'sub_domain' => $sub_domain,
+        'record_type' => strtoupper($type)
+    ]), 1);
+
+    $response = json_decode($res, true);
+
+    if ($response['status']['code'] !== '1') {
+        throw new Exception("请求 DNSPod API失败，原因：{$response['status']['message']}");
+    }
+
+    if (isset($response['records'][0]['id'])) {
+        return $response['records'][0];
+    }
+
+    return null;
+}
+
+/**
+ * 拼接请求参数数组
+ *
+ * @param array $arr
+ * @return array
+ */
+function get_request_param($arr = [])
+{
+    return array_merge([
+        'login_token' => sprintf("%s,%s", API_ID, API_TOKEN),
+        'format' => 'json',
+        'lang' => 'cn',
+        'error_on_empty' => 'no',
+    ], $arr);
+}
 
 /**
  * 获取公网 Pv6 地址，一般情况下，如果在各大云服务厂商购买的服务器，如果选择的是 Linux 或 Windows，
@@ -104,21 +227,34 @@ function get_public_ipv4($index = 0, $try = 2)
 
 
 /**
+ * 打印日志并终止脚本执行
+ * @param $reason
+ * @param $domain
+ * @param $sub_domain
+ * @param $type
+ * @param $value
+ */
+function print_info_log($reason, $domain, $sub_domain, $type, $value)
+{
+    die(sprintf("【%s.%s】%s记录值：%s %s\t——%s" . PHP_EOL, $sub_domain, $domain, $type, $value, $reason, date("Y-m-d H:i:s")));
+}
+
+
+/**
  * cURL GET / POST 封装方法
  * 来源于：https://blog.csdn.net/weixin_41970498/article/details/83010683
  *
  * @param $url
- * @param false $params
- * @param int $isPost
+ * @param bool $params
+ * @param bool $isPost
  * @param int $https
  * @return bool|string
  */
-function curl($url, $params = false, $isPost = 0, $https = 1)
+function curl($url, $params = false, $isPost = false, $https = 1)
 {
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-    curl_setopt($ch, CURLOPT_USERAGENT, 'chuwen/Qcloud-DDNS @0.1.0');
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+//    curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+    curl_setopt($ch, CURLOPT_USERAGENT, $isPost ? '' : 'Chuwen DDNS Client/1.0.0');
     curl_setopt($ch, CURLOPT_TIMEOUT, 5);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     if ($https) {
@@ -127,7 +263,7 @@ function curl($url, $params = false, $isPost = 0, $https = 1)
     }
     if ($isPost) {
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
         curl_setopt($ch, CURLOPT_URL, $url);
     } else {
         if ($params) {
