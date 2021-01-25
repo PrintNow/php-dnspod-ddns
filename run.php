@@ -6,8 +6,9 @@
  */
 
 //请前往 https://console.dnspod.cn/account/token 创建获取
-define("API_ID", "");
-define("API_TOKEN", "");
+//详细教程 https://docs.dnspod.cn/account/5f2d466de8320f1a740d9ff3/
+define("ID", "");
+define("TOKEN", "");
 
 //根域名，比如你注册的是 iton.pw 那么 iton.pw 就是根域名
 //特殊根域名，比如 google.com.hk，你不应该填写 com.hk 应该填写 google.com.cn
@@ -22,6 +23,19 @@ define("SUB_DOMAIN", "www");
 //解析类型，如果需要解析的是 IPv6 那么填写 AAAA  （4个A）
 //如果需要解析的是 IPv4 那么填写 A
 define("TYPE", "AAAA");
+
+
+//----------------------------------------------------------------------//
+//一般情况下，如果在各大云服务厂商购买的服务器，如果选择的是 Linux 或 Windows，
+//它们的架构都是 x64 的，但也不排除一些 Linux 是 arm 架构的，请自我甄别
+
+//操作系统，默认是 linux。请根据自己设备实际情况填写，只能够填写 win、linux、darwin （不区分大小写）
+define("OS", "linux");
+
+//CPU 架构，默认是 x64。请根据自己设备实际情况填写，只能够填写 x86、x64、mips、mips64、mips64le、mipsle、arm、arm64、arm5、arm6、arm7（不区分大小写）
+define("Arch", "x64");
+//----------------------------------------------------------------------//
+
 
 //获取公网 IP 地址
 if (TYPE === 'AAAA') {
@@ -145,7 +159,7 @@ function get_record_id($domain, $sub_domain, $type)
 function get_request_param($arr = [])
 {
     return array_merge([
-        'login_token' => sprintf("%s,%s", API_ID, API_TOKEN),
+        'login_token' => sprintf("%s,%s", ID, TOKEN),
         'format' => 'json',
         'lang' => 'cn',
         'error_on_empty' => 'no',
