@@ -1,5 +1,29 @@
 # PHP 动态域名解析（基于 Dnspod）| PHP DDNS（base on DNSpod）
 
+# 目录结构
+
+```
+.
+├── README.md
+├── bin    # 存放获取公网 IPv6 二进制文件
+│   ├── get_public_ipv6-darwin-10.6-386
+│   ├── get_public_ipv6-darwin-10.6-amd64
+│   ├── get_public_ipv6-linux-386
+│   ├── get_public_ipv6-linux-amd64
+│   ├── get_public_ipv6-linux-arm-5
+│   ├── get_public_ipv6-linux-arm-6
+│   ├── get_public_ipv6-linux-arm-7
+│   ├── get_public_ipv6-linux-arm64
+│   ├── get_public_ipv6-linux-mips
+│   ├── get_public_ipv6-linux-mips64
+│   ├── get_public_ipv6-linux-mips64le
+│   ├── get_public_ipv6-linux-mipsle
+│   ├── get_public_ipv6-windows-4.0-386.exe
+│   ├── get_public_ipv6-windows-4.0-amd64.exe
+│   └── get_public_ipv6.go
+└── run.php    # 程序逻辑代码
+```
+
 # 🍕 使用方法
 
 1. 🎁 获取代码
@@ -11,7 +35,7 @@
 
 3. 📁 `bin` 目录说明，此目录下存放的是 **获取公网 IPv6 二进制文件**，作用是为了获取公网IPv6，是使用 `Golang` 编写的，然后使用 `xgo` 交叉编译成各个操作系统，不同 CPU
    架构的二进制文件。如果你不想使用本方法获取公网 IPv6，你可以自行重新编写（需要有 PHP 编程能力） `run.php` 的 `get_public_ipv6()` 函数
-   
+
    > 小提示：你可以只保留符合你当前操作系统的 **二进制文件**，但是请不要更改其名字
    >
    > 另外，一般情况下，如果在各大云服务厂商购买的服务器，如果选择的是 Linux 或 Windows，它们的架构基本都是 x64 的，但也不排除一些 Linux 是 arm 架构的，请自我鉴别
