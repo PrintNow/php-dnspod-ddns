@@ -110,6 +110,7 @@ function add_record($domain, $sub_domain, $type, $value)
         'sub_domain' => $sub_domain,
         'record_type' => strtoupper($type),//记录类型：A、AAAA
         'value' => $value,//记录值
+        'record_line' => '默认',//记录线路
     ]), 1);
 
     $response = json_decode($res, true);
