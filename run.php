@@ -40,7 +40,7 @@ define("Arch", "x64");
 //获取公网 IP 地址
 if (TYPE === 'AAAA') {
     try {
-        $ip = get_public_ipv6('win', 'x64');
+        $ip = get_public_ipv6(OS, Arch);
     } catch (Exception $e) {
         die($e->getMessage());
     }
