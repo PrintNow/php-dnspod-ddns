@@ -74,6 +74,9 @@ sudo apt-get -y install php php-curl
 ```bash
 cd php-dnspod-ddns
 
+# 给予二进制文件 755 权限，这样才能执行
+chmod 755 ./bin/*
+
 php run.php
 ```
 
