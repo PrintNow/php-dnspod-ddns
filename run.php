@@ -5,24 +5,29 @@
  * 请不要因为注释多而觉得配置很麻烦
  */
 
+
+// 如果你想通过查询 DNS 的方法检测 IP 是否相同，请填入 DNS
+const CHECK_TYPE = "";
+// const CHECK_TYPE = "DNS";
+
 //请前往 https://console.dnspod.cn/account/token 创建获取
 //详细教程 https://docs.dnspod.cn/account/5f2d466de8320f1a740d9ff3/
-define("ID", "");
-define("TOKEN", "");
+const ID = "";
+const TOKEN = "";
 
 //根域名，比如你注册的是 iton.pw 那么 iton.pw 就是根域名
 //特殊根域名，比如 google.com.hk，你不应该填写 com.hk 应该填写 google.com.cn
-define("DOMAIN", "nowtime.cc");
+const DOMAIN = "nowtime.cc";
 
 //子域名，假设你的根域名是 iton.pw
 //你想解析 chuwen.iton.pw 那么你就填写 chuwen
 //你想解析 666.chuwen.iton.pw 那么你就填写 666.chuwen
 //以此类推
-define("SUB_DOMAIN", "www");
+const SUB_DOMAIN = "www";
 
 //解析类型，如果需要解析的是 IPv6 那么填写 AAAA  （4个A）
 //如果需要解析的是 IPv4 那么填写 A
-define("TYPE", "AAAA");
+const TYPE = "AAAA";
 
 
 //----------------------------------------------------------------------//
@@ -30,10 +35,10 @@ define("TYPE", "AAAA");
 //它们的架构都是 x64 的，但也不排除一些 Linux 是 arm 架构的，请自我鉴别
 
 //操作系统，默认是 linux。请根据自己设备实际情况填写，只能够填写 win、linux、darwin （不区分大小写）
-define("OS", "linux");
+const OS = "linux";
 
 //CPU 架构，默认是 x64。请根据自己设备实际情况填写，只能够填写 x86、x64、mips、mips64、mips64le、mipsle、arm、arm64、arm5、arm6、arm7（不区分大小写）
-define("Arch", "x64");
+const Arch = "x64";
 //----------------------------------------------------------------------//
 
 
@@ -42,10 +47,29 @@ if (TYPE === 'AAAA') {
     try {
         $ip = get_public_ipv6(OS, Arch);
     } catch (Exception $e) {
-        die($e->getMessage());
+        die(($e->getMessage()));
     }
 } else {
     $ip = get_public_ipv4();
+}
+
+// 如检测 IP 是否相同的方法是 DNS
+if (CHECK_TYPE === "DNS") {
+    try {
+        $dns_query = dns_get_record(SUB_DOMAIN . "." . DOMAIN, TYPE === 'AAAA' ? DNS_AAAA : DNS_A);
+    } catch (Exception $e) {
+        die(($e->getMessage()));
+    }
+
+    if ($dns_query !== false) {
+        $ip_key = TYPE === 'AAAA' ? 'ipv6' : 'ip';
+        $query_ip = empty($dns_query[0][$ip_key]) ? '' : $dns_query[0][$ip_key];
+        if (!empty($query_ip)) {
+            if ($ip === $query_ip) {
+                die("IP 地址相同，不执行更新，当前 IP：{$ip}");
+            }
+        }
+    }
 }
 
 try {
@@ -71,6 +95,7 @@ modify_record($record['id'], DOMAIN, SUB_DOMAIN, TYPE, $ip);
 
 /**
  * 修改域名记录值
+ *
  * @param $record_id
  * @param $domain
  * @param $sub_domain
@@ -98,10 +123,11 @@ function modify_record($record_id, $domain, $sub_domain, $type, $value)
 
 /**
  * 添加域名记录
+ *
  * @param string $domain
  * @param string $sub_domain
  * @param string $type
- * @param $value
+ * @param        $value
  */
 function add_record($domain, $sub_domain, $type, $value)
 {
@@ -127,6 +153,7 @@ function add_record($domain, $sub_domain, $type, $value)
  * @param string $domain
  * @param string $sub_domain
  * @param string $type all：表示只获取 A 和 AAAA 记录值
+ *
  * @return false|array
  * @throws Exception
  */
@@ -135,7 +162,7 @@ function get_record_id($domain, $sub_domain, $type)
     $res = curl('https://dnsapi.cn/Record.List', get_request_param([
         'domain' => $domain,
         'sub_domain' => $sub_domain,
-        'record_type' => strtoupper($type)
+        'record_type' => strtoupper($type),
     ]), 1);
 
     $response = json_decode($res, true);
@@ -155,6 +182,7 @@ function get_record_id($domain, $sub_domain, $type)
  * 拼接请求参数数组
  *
  * @param array $arr
+ *
  * @return array
  */
 function get_request_param($arr = [])
@@ -171,10 +199,11 @@ function get_request_param($arr = [])
  * 获取公网 Pv6 地址，一般情况下，如果在各大云服务厂商购买的服务器，如果选择的是 Linux 或 Windows，
  * 它们的架构都是 x64 的，但也不排除一些 Linux 是amd64架构的，请自我甄别
  *
- * @param string $OS 操作系统，默认是 linux。
- *                   只能够填写 win、linux、darwin （不区分大小写）
+ * @param string $OS   操作系统，默认是 linux。
+ *                     只能够填写 win、linux、darwin （不区分大小写）
  * @param string $Arch CPU 架构，默认是 x64。
  *                     只能够填写 x86、x64、mips、mips64、mips64le、mipsle、arm、arm64、arm5、arm6、arm7（不区分大小写）
+ *
  * @return string   如果获取到 IPv6 将会返回长度大于 0 的字符串，否则返回空字符串。
  *                  如果因为一些原因报错了，也会返回报错信息，但是他不是作为返回值输出，而是直接打印在屏幕上
  *
@@ -207,9 +236,11 @@ function get_public_ipv6($OS = 'linux', $Arch = 'x64')
 
 /**
  * 获取公网 IPv4 地址
+ *
  * @param int $index 使用哪个接口，默认使用的是 $apis 下标为 0 的接口，即 https://ipv4.nowtool.cn <br/>
  *                   如果想随机使用接口请使用传入 -1，如果想传入自己指定接口请自己传入指定下标
- * @param int $try 访问接口错误，尝试多少次，默认 2 次。如果第一次访问错误了，那么将会随机访问接口列表中的一个
+ * @param int $try   访问接口错误，尝试多少次，默认 2 次。如果第一次访问错误了，那么将会随机访问接口列表中的一个
+ *
  * @return string   公网 IPv4，。如果获取失败就返回空字符串
  */
 function get_public_ipv4($index = 0, $try = 2)
@@ -218,7 +249,7 @@ function get_public_ipv4($index = 0, $try = 2)
     //必须是访问就返回 IPv4 的接口
     $apis = [
         'https://ipv4.nowtool.cn',
-        'https://api-ipv4.ip.sb/ip'
+        'https://api-ipv4.ip.sb/ip',
     ];
     $isTry = 0;
 
@@ -243,11 +274,12 @@ function get_public_ipv4($index = 0, $try = 2)
 
 /**
  * 打印日志并终止脚本执行
- * @param $reason
- * @param $domain
- * @param $sub_domain
- * @param $type
- * @param $value
+ *
+ * @param string $reason
+ * @param string $domain
+ * @param string $sub_domain
+ * @param mixed  $type
+ * @param string $value
  */
 function print_info_log($reason, $domain, $sub_domain, $type, $value)
 {
@@ -259,10 +291,11 @@ function print_info_log($reason, $domain, $sub_domain, $type, $value)
  * cURL GET / POST 封装方法
  * 来源于：https://blog.csdn.net/weixin_41970498/article/details/83010683
  *
- * @param $url
- * @param bool $params
- * @param bool $isPost
- * @param int $https
+ * @param string $url
+ * @param bool   $params
+ * @param bool   $isPost
+ * @param int    $https
+ *
  * @return bool|string
  */
 function curl($url, $params = false, $isPost = false, $https = 1)
@@ -273,8 +306,8 @@ function curl($url, $params = false, $isPost = false, $https = 1)
     curl_setopt($ch, CURLOPT_TIMEOUT, 5);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     if ($https) {
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE); // 对认证证书来源的检查
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE); // 从证书中检查SSL加密算法是否存在
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // 对认证证书来源的检查
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // 从证书中检查SSL加密算法是否存在
     }
     if ($isPost) {
         curl_setopt($ch, CURLOPT_POST, true);
@@ -293,7 +326,7 @@ function curl($url, $params = false, $isPost = false, $https = 1)
 
     $response = curl_exec($ch);
 
-    if ($response === FALSE) {
+    if ($response === false) {
         return false;
     }
 
